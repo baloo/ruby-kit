@@ -215,3 +215,16 @@ describe 'Form' do
     end
   end
 end
+
+describe 'SearchForm' do
+  before do
+  end
+
+  describe 'submit' do
+    it "should throw an exception if the form type is not supported" do
+      form = Form.new(nil, {}, 'foo', nil, nil, nil)
+      search_form = SearchForm.new(nil, form, nil)
+      expect { search_form.submit }.to raise_error SearchForm::NotSupportedFormTypeException
+    end
+  end
+end

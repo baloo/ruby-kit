@@ -134,6 +134,18 @@ class SearchForm
     @form = form
     @data = data
   end
+
+  def submit
+    if form.form_method.downcase == 'get' && form.enctype == 'application/x-www-form-urlencoded'
+      action = form.action
+    else
+      p "foo"
+      raise NotSupportedFormTypeException
+    end
+  end
+
+  class NotSupportedFormTypeException < Exception
+  end
 end
 
 class Field
