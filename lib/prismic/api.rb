@@ -1,6 +1,6 @@
 module Prismic
   class API
-    attr_accessor :refs, :bookmarks, :forms, :master, :tags, :types
+    attr_accessor :refs, :bookmarks, :forms, :master, :tags, :types, :oauth
 
     def initialize(args)
       @json = args.fetch(:json)
@@ -9,6 +9,7 @@ module Prismic
       @forms = args.fetch(:forms)
       @tags = args.fetch(:tags)
       @types = args.fetch(:types)
+      @oauth = OAuth.new(args.fetch(:oauth_initiate), args.fetch(:oauth_token))
       self.master = refs.values.map { |ref| ref if ref.master? }.compact.first
       raise BadPrismicResponseError, "No master Ref found" unless master
     end
@@ -78,7 +79,27 @@ module Prismic
         }],
         tags: data['tags'],
         types: data['types'],
+        oauth_initiate: data['oauth_initiate'],
+        oauth_token: data['oauth_token'],
       })
+    end
+
+    def oauth_initiate_url(opts)
+      oauth.initiate + "?" + {
+        "client_id" => opts.fetch(:client_id),
+        "redirect_uri" => opts.fetch(:redirect_uri),
+        "scope" => opts.fetch(:scope),
+      }.map{|kv| kv.map{|e| CGI.escape(e) }.join("=") }.join("&")
+    end
+
+    def oauth_check_token(params)
+      uri = URI(oauth.token)
+      res = Net::HTTP.post_form(uri, params)
+      if res.code == '200'
+        res
+      else
+        raise PrismicWSConnectionError, res
+      end
     end
 
     private
@@ -88,6 +109,14 @@ module Prismic
     class PrismicWSConnectionError < Error
       def initialize(resp, cause=nil)
         super("Can't connect to Prismic's API: #{resp.code} #{resp.message}", cause)
+      end
+    end
+
+    class OAuth
+      attr_reader :initiate, :token
+      def initialize(initiate, token)
+        @initiate = initiate
+        @token = token
       end
     end
   end
